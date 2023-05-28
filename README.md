@@ -1,9 +1,5 @@
 # decimal
 
-[![Github Actions](https://github.com/shopspring/decimal/actions/workflows/ci.yml/badge.svg)](https://github.com/shopspring/decimal/actions/workflows/ci.yml)
-[![GoDoc](https://godoc.org/github.com/shopspring/decimal?status.svg)](https://godoc.org/github.com/shopspring/decimal) 
-[![Go Report Card](https://goreportcard.com/badge/github.com/shopspring/decimal)](https://goreportcard.com/report/github.com/shopspring/decimal)
-
 Arbitrary-precision fixed-point decimal numbers in go.
 
 _Note:_ Decimal library can "only" represent numbers with a maximum of 2^31 digits after the decimal point.
@@ -58,15 +54,6 @@ func main() {
 	fmt.Println("Tax rate:", total.Sub(preTax).Div(preTax)) // Tax rate: 0.08875
 }
 ```
-
-## Documentation
-
-http://godoc.org/github.com/shopspring/decimal
-
-## Production Usage
-
-* [Spring](https://shopspring.com/), since August 14, 2014.
-* If you are using this in production, please let us know!
 
 ## FAQ
 
@@ -124,9 +111,3 @@ return new Decimals and do not modify the originals. The downside is that
 this causes extra allocations, so Decimal is less performant.  My assumption
 is that if you're using Decimals, you probably care more about correctness
 than performance.
-
-## License
-
-The MIT License (MIT)
-
-This is a heavily modified fork of [fpd.Decimal](https://github.com/oguzbilgic/fpd), which was also released under the MIT License.
