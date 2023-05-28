@@ -19,6 +19,7 @@ package decimal
 import (
 	"database/sql/driver"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -58,8 +59,6 @@ var ExpMaxIterations = 1000
 // Zero constant, to make computations faster.
 // Zero should never be compared with == or != directly, please use decimal.Equal or decimal.Cmp instead.
 var Zero = New(0, 1)
-var flZero = *big.NewInt(0)
-var NaN = NewFromFloat(math.NaN())
 var zeroInt = big.NewInt(0)
 var oneInt = big.NewInt(1)
 var twoInt = big.NewInt(2)
@@ -467,12 +466,6 @@ func (d Decimal) rescale(exp int32) Decimal {
 
 // MaxSlice returns the max of a slice of decimals
 func MaxSlice(decimals ...Decimal) Decimal {
-	if anyNan(decimals...) {
-		return NaN
-	} else if len(decimals) == 0 {
-		return Zero
-	}
-
 	initial := NewFromFloat(math.Inf(-1))
 
 	for _, decimal := range decimals {
@@ -486,12 +479,6 @@ func MaxSlice(decimals ...Decimal) Decimal {
 
 // MinSlice returns the min of a slice of decimals
 func MinSlice(decimals ...Decimal) Decimal {
-	if anyNan(decimals...) {
-		return NaN
-	} else if len(decimals) == 0 {
-		return Zero
-	}
-
 	initial := NewFromFloat(math.Inf(1))
 	for _, decimal := range decimals {
 		if decimal.LessThan(initial) {
@@ -500,58 +487,6 @@ func MinSlice(decimals ...Decimal) Decimal {
 	}
 
 	return initial
-}
-
-func anyNan(decimals ...Decimal) bool {
-	for _, decimal := range decimals {
-		if decimal.NaN() {
-			return true
-		}
-	}
-
-	return false
-}
-
-// NaN returns true if the underlying is not a valid number
-func (d Decimal) NaN() bool {
-	return d.value == nil
-}
-
-// Sqrt returns the decimal's square root
-func (d Decimal) Sqrt(n int64, precision int64) Decimal {
-	ans_int := strconv.Itoa(int(math.Sqrt(float64(n))))
-
-	limit := new(big.Int).Exp(big.NewInt(10), big.NewInt(precision+1), nil)
-	a := big.NewInt(5 * n)
-	b := big.NewInt(5)
-	five := big.NewInt(5)
-	ten := big.NewInt(10)
-	hundred := big.NewInt(100)
-
-	for b.Cmp(limit) < 0 {
-		if a.Cmp(b) < 0 {
-			a.Mul(a, hundred)
-			tmp := new(big.Int).Div(b, ten)
-			tmp.Mul(tmp, hundred)
-			b.Add(tmp, five)
-		} else {
-			a.Sub(a, b)
-			b.Add(b, ten)
-		}
-	}
-	b.Div(b, hundred)
-
-	ans_dec := b.String()
-
-	s, _ := NewFromString(ans_dec[:len(ans_int)] + "." + ans_dec[len(ans_int):])
-
-	return s
-}
-
-// Frac returns another Decimal instance representing this Decimal multiplied by the
-// provided float.
-func (d Decimal) Frac(f float64) Decimal {
-	return d.Mul(NewFromFloat(f))
 }
 
 // Abs returns the absolute value of the decimal.
@@ -1977,4 +1912,60 @@ func (d Decimal) Tan() Decimal {
 		y = y.Neg()
 	}
 	return y
+}
+
+// More math
+
+// Sqrt returns the square root of d, accurate to DivisionPrecision decimal places.
+// Sqrt is only valid for non-negative numbers; it will return an error otherwise.
+func (d Decimal) Sqrt() (Decimal, error) {
+	s, _, err := d.SqrtRound(int32(DivisionPrecision))
+	return s, err
+}
+
+// ErrImaginaryResult indicates an operation that would produce an imaginary result.
+var ErrImaginaryResult = errors.New("result of this operation is imaginary")
+
+// SqrtMaxIter sets a limit for number of iterations for the Sqrt function
+const SqrtMaxIter = 1000000
+
+// SqrtRound returns the square root of d, accurate to precision decimal places.
+// The bool precise returns whether the precision was achieved.
+// SqrtRound is only valid for non-negative numbers; it will return an error otherwise.
+func (d Decimal) SqrtRound(precision int32) (Decimal, bool, error) {
+	var (
+		maxError = New(1, -precision)
+		one      = NewFromFloat(1)
+		lo, hi   Decimal
+	)
+
+	// Handle cases where d < 0, d = 0, 0 < d < 1, and d > 1
+	if d.GreaterThanOrEqual(one) {
+		lo = Zero
+		hi = d
+	} else if d.Equal(one) {
+		return one, true, nil
+	} else if d.LessThan(Zero) {
+		return Zero, false, ErrImaginaryResult
+	} else if d.Equal(Zero) {
+		return Zero, true, nil
+	} else {
+		// d is between 0 and 1. Therefore, 0 < d < Sqrt(d) < 1.
+		lo = d
+		hi = one
+	}
+
+	var mid Decimal
+	for i := 0; i < SqrtMaxIter; i++ {
+		mid = lo.Add(hi).Div(New(2, 0)) //mid = (lo+hi)/2;
+		if mid.Mul(mid).Sub(d).Abs().LessThan(maxError) {
+			return mid, true, nil
+		}
+		if mid.Mul(mid).GreaterThan(d) {
+			hi = mid
+		} else {
+			lo = mid
+		}
+	}
+	return mid, false, nil
 }
