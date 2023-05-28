@@ -464,31 +464,6 @@ func (d Decimal) rescale(exp int32) Decimal {
 	}
 }
 
-// MaxSlice returns the max of a slice of decimals
-func MaxSlice(decimals ...Decimal) Decimal {
-	initial := NewFromFloat(math.Inf(-1))
-
-	for _, decimal := range decimals {
-		if decimal.GreaterThan(initial) {
-			initial = decimal
-		}
-	}
-
-	return initial
-}
-
-// MinSlice returns the min of a slice of decimals
-func MinSlice(decimals ...Decimal) Decimal {
-	initial := NewFromFloat(math.Inf(1))
-	for _, decimal := range decimals {
-		if decimal.LessThan(initial) {
-			initial = decimal
-		}
-	}
-
-	return initial
-}
-
 // Abs returns the absolute value of the decimal.
 func (d Decimal) Abs() Decimal {
 	if !d.IsNegative() {
