@@ -548,6 +548,12 @@ func (d Decimal) Sqrt(n int64, precision int64) Decimal {
 	return s
 }
 
+// Frac returns another Decimal instance representing this Decimal multiplied by the
+// provided float.
+func (d Decimal) Frac(f float64) Decimal {
+	return d.Mul(NewFromFloat(f))
+}
+
 // Abs returns the absolute value of the decimal.
 func (d Decimal) Abs() Decimal {
 	if !d.IsNegative() {
