@@ -1,3 +1,3 @@
-module github.com/algoboyz/decimal
+module github.com/algo-boyz/decimal
 
 go 1.19
